@@ -1,0 +1,14 @@
+all:
+  googleClosure:
+    
+    # Path to the "closure" JS directory
+    # See http://code.google.com/intl/fr/closure/library/docs/gettingstarted.html
+    base-path:    /sfGoogleClosurePlugin/js/closure
+    
+    # Path to the dependency calculation script
+    # See http://code.google.com/intl/fr/closure/library/docs/calcdeps.html
+    calc-deps-py: %sf_plugins_dir%/sfGoogleClosurePlugin/data/bin/calcdeps.py
+    
+    # Path to the compiler.jar
+    # See http://code.google.com/intl/fr/closure/compiler/
+    compile-jar:  %sf_plugins_dir%/sfGoogleClosurePlugin/data/compiler.jar
