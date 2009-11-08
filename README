@@ -2,5 +2,39 @@ TODO
 
 Notes :
 
- * Example using calcdeps :
-   ./symfony closure:calc-deps -i goog-test -o compiled --output=goog-test-full-and-compiled
+ * Example using calcdeps & compiler :
+    $ ./symfony closure:calc-deps -i goog-test -o compiled --output=goog-test-full-and-compiled
+    <?php
+    use_helper('Javascript');
+    use_javascript('goog-test-full-and-compiled');
+    echo javascript_tag('sayHi();');
+    ?>
+   
+ * Example using rich-editor :
+    <style type="text/css">
+      .goog-rich-editor-edit {
+        background-color: white;
+        border: 1px solid grey;
+      }
+      .editable p {
+        margin: 0;
+      }
+    </style>
+    <?php 
+      $form = new sfForm();
+      $form->setWidget('rich-text', new sfWidgetFormGoogleClosureRichText());
+      include_javascripts_for_form($form);
+      include_stylesheets_for_form($form);
+      echo $form;
+    ?>
+
+ * Example using helper :
+    <?php
+    use_helper('Javascript', 'GoogleClosure');
+    use_javascript_closure();
+    echo javascript_tag("
+      goog.require('goog.dom');
+      var newDiv = goog.dom.createDom('h1', {'style': 'background-color:#EEE'}, 'Hello world!');
+      goog.dom.appendChild(document.body, newDiv);
+    ");
+    ?>

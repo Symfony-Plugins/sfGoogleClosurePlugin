@@ -24,21 +24,14 @@ abstract class sfGoogleClosureBaseTask extends sfBaseTask
   
   protected function convertWebPathToSystemPath($web_path, $base_dir = '')
   {
-    $web_dir = sfConfig::get('sf_web_dir');
-    
-    if ($web_path{0} != '/')
-    {
-      $web_path = $base_dir . '/'.$web_path;
-    }
-    
-    return rtrim($web_dir, DIRECTORY_SEPARATOR) . str_replace('/', DIRECTORY_SEPARATOR, $web_path);
+    return GoogleClosureUtils::convertWebPathToSystemPath($web_path, $base_dir);
   }
   
   protected function getDefaultGoogleClosurePath()
   {
     $web_path = sfConfig::get('app_googleClosure_base-path');
     
-    return $this->convertWebPathToSystemPath($web_path, '/js');
+    return $this->convertWebPathToSystemPath($web_path.'/goog', '/js');
   }
   
   protected function getDefaultGoogleClosureCompilerJar()

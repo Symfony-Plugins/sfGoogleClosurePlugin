@@ -7,10 +7,7 @@ function use_javascript_closure()
 {
   use_helper('Asset');
   
-  $base_path = sfConfig::get('app_googleClosure_base-path');
-  $base_path = rtrim($base_path, '/');
-  
-  use_javascript($base_path . '/goog/base.js');
+  use_javascript(GoogleClosureUtils::getGoogBaseJavascript());
 }
 
 /**
@@ -25,5 +22,34 @@ function goog_require($library)
   
   use_javascript_closure();
   
-  return javascript_tag('goog.require(\'' . $library .  '\');');
+  $args = func_get_args();
+  $libraries = array();
+  foreach ($args as $arg)
+  {
+    if (is_array($arg))
+    {
+      $libraries = array_merge($arg);
+    }
+    else
+    {
+      $libraries[] = $arg;
+    }
+  }
+  
+  if (count($libraries))
+  {
+    return javascript_tag("\n" . GoogleClosureUtils::getGoogRequire($libraries) . "\n");
+  }
+}
+
+/**
+ * Include one of the stylesheets embedded with Google Closure
+ * 
+ * @param $stylesheet
+ */
+function use_stylesheet_closure($stylesheet, $module = null)
+{
+  use_helper('Asset');
+  
+  use_stylesheet(GoogleClosureUtils::getGoogStylesheet($stylesheet, $module));
 }
