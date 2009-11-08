@@ -1,6 +1,6 @@
 <?php
 
-class sfGoogleClosureCalcDepsTask extends sfBaseTask
+class sfGoogleClosureCalcDepsTask extends sfGoogleClosureBaseTask
 {
 
   const MODE_LIST = 'list';
@@ -8,10 +8,8 @@ class sfGoogleClosureCalcDepsTask extends sfBaseTask
   const MODE_DEPS = 'deps';
   const MODE_COMPILED = 'compiled';
   
-  const COMPILER_URL = 'http://code.google.com/closure/compiler/';
-  
-  protected $input_modes = array(self::MODE_LIST, self::MODE_SCRIPT, self::MODE_DEPS, self::MODE_COMPILED);
-  protected $default_input_mode = self::MODE_SCRIPT;
+  protected $output_modes = array(self::MODE_LIST, self::MODE_SCRIPT, self::MODE_DEPS, self::MODE_COMPILED);
+  protected $default_output_mode = self::MODE_SCRIPT;
   
   protected function configure()
   {
@@ -27,99 +25,32 @@ class sfGoogleClosureCalcDepsTask extends sfBaseTask
     
     $this->addOption('input', 'i', sfCommandOption::PARAMETER_OPTIONAL, 'Input script');
     $this->addOption('output', 'u', sfCommandOption::PARAMETER_OPTIONAL, 'Output script');
-    $this->addOption('output-mode', 'o', sfCommandOption::PARAMETER_OPTIONAL, 'Output mode, can be one of "'.implode(", ", $this->input_modes).'"', $this->default_input_mode);
+    $this->addOption('output-mode', 'o', sfCommandOption::PARAMETER_OPTIONAL, 'Output mode, can be one of "'.implode(", ", $this->output_modes).'"', $this->default_output_mode);
     $this->addOption('path', 'p', sfCommandOption::PARAMETER_OPTIONAL, 'Paths to be traversed to build dependencies', null);
-    $this->addOption('compiler-jar', 'c', sfCommandOption::PARAMETER_OPTIONAL, 'Additional flags passed to the Closure compiler', null);
+    $this->addOption('compiler-jar', 'c', sfCommandOption::PARAMETER_OPTIONAL, 'Path to compiler JAR', null);
     $this->addOption('compiler-flags', 'f', sfCommandOption::PARAMETER_OPTIONAL, 'Additional flags passed to the Closure compiler', null);
+    $this->addOption('compiler-level', 'l', sfCommandOption::PARAMETER_OPTIONAL, 'Compilation level : from 1 to 3', $this->default_compilation_level);
     
     $this->addOption('no-confirmation', 'y', sfCommandOption::PARAMETER_NONE, 'Do not ask confirmation before overwriting output file');
   } 
-  
-  protected function convertWebPathToSystemPath($web_path, $base_dir = '')
-  {
-    $web_dir = sfConfig::get('sf_web_dir');
-    
-    if ($web_path{0} != '/')
-    {
-      $web_path = $base_dir . '/'.$web_path;
-    }
-    
-    return rtrim($web_dir, DIRECTORY_SEPARATOR) . str_replace('/', DIRECTORY_SEPARATOR, $web_path);
-  }
-  
-  protected function getDefaultGoogleClosurePath()
-  {
-    $web_path = sfConfig::get('app_googleClosure_base-path');
-    
-    return $this->convertWebPathToSystemPath($web_path, '/js');
-  }
   
   protected function getDefaultGoogleClosureCalcDepsScript()
   {
     return str_replace('/', DIRECTORY_SEPARATOR, sfConfig::get('app_googleClosure_calc-deps-py'));
   }
   
-  protected function getDefaultGoogleClosureCompilerJar()
+  protected function validateOutputMode($mode)
   {
-    return str_replace('/', DIRECTORY_SEPARATOR, sfConfig::get('app_googleClosure_compiler-jar'));
-  }
-  
-  protected function validateInputMode($mode)
-  {
-    if (!in_array($mode, $this->input_modes))
+    if (!in_array($mode, $this->output_modes))
     {
-      throw new sfException('Input mode must be one of "'.implode('", "', $this->input_modes).'"');
+      throw new sfException('Input mode must be one of "'.implode('", "', $this->output_modes).'"');
     }
-  }
-  
-  protected function validateExists($option, $path, $type = null)
-  { 
-    if (is_null($type))
-    {
-      $type = 'file';
-    }
-    
-    if (is_null($path))
-    {
-      throw new sfException('Option "'.$option.'" must be a valid ' . $type . ' : no value provided');
-    }
-    
-    $exists = 'is_' . $type;
-    if (!$exists($path))
-    {
-      throw new sfException('Option "'.$option.'" : ' . $type.' "'.$path.'" does not exist');
-    }
-  }
-  
-  protected function getJSPath($path)
-  {
-    try
-    {
-      $this->validateExists(null, $path);
-    }
-    catch (sfException $e)
-    {
-      if (false === strpos($path, '.'))
-      {
-        $path .= '.js';
-      }
-      $path = $this->convertWebPathToSystemPath($path, '/js');
-    }
-    
-    return $path;
-  }
-  
-  protected function validateJS($option, & $path)
-  {
-    $path = $this->getJSPath($path);
-    
-    $this->validateExists($option, $path, 'file');
   }
   
   protected function execute($arguments = array(), $options = array())
   {
     $mode = $options['output-mode'];
-    $this->validateInputMode($mode);
+    $this->validateOutputMode($mode);
     
     $script = is_null($options['script']) ? $this->getDefaultGoogleClosureCalcDepsScript() : $options['script'];
     $this->validateExists('script', $script, 'file');
@@ -147,6 +78,7 @@ class sfGoogleClosureCalcDepsTask extends sfBaseTask
     // Mode "compiled" requires handling compiler options
     if ($mode == self::MODE_COMPILED)
     {
+      // compiler-jar
       $jar = $options['compiler-jar'];
       if (is_null($jar))
       {
@@ -154,10 +86,14 @@ class sfGoogleClosureCalcDepsTask extends sfBaseTask
       }
       $this->validateExists('compiler-jar', $jar);
       $command_args['-c'] = $jar;
-      if (!is_null($flags = $options['compiler-flags']))
+      // compiler-level and flags
+      $level = $options['compiler-level'];
+      $flags = $options['compiler-flags'];
+      if ($level_flag = $this->getCompilationLevelFlag($level))
       {
-        $command_args['-f'] = $flags;
+        $flags = $level_flag . ' ' . $flags;
       }
+      $command_args['-f'] = $flags;
     }
     
     // Check output file if provided
@@ -188,6 +124,7 @@ class sfGoogleClosureCalcDepsTask extends sfBaseTask
     {
       $cmd .= ' ' . $param . ' ' . escapeshellarg($value);
     }
+    echo $cmd.PHP_EOL;
     
     $this->logSection('exec', $cmd);
     
