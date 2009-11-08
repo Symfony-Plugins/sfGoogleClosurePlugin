@@ -8,6 +8,8 @@ class sfGoogleClosureCalcDepsTask extends sfBaseTask
   const MODE_DEPS = 'deps';
   const MODE_COMPILED = 'compiled';
   
+  const COMPILER_URL = 'http://code.google.com/closure/compiler/';
+  
   protected $input_modes = array(self::MODE_LIST, self::MODE_SCRIPT, self::MODE_DEPS, self::MODE_COMPILED);
   protected $default_input_mode = self::MODE_SCRIPT;
   
@@ -181,22 +183,39 @@ class sfGoogleClosureCalcDepsTask extends sfBaseTask
   
   protected function executeCommand($bin, array $args = array(), $output_file = null)
   {
-    $exec = $bin;
+    $cmd = $bin;
     foreach ($args as $param => $value)
     {
-      $exec .= ' ' . $param . ' ' . escapeshellarg($value);
+      $cmd .= ' ' . $param . ' ' . escapeshellarg($value);
     }
     
-    $js_skel = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'output.js.skel';
-    if (!is_file($js_skel))
+    $this->logSection('exec', $cmd);
+    
+    $descriptorspec = array(
+       0 => array("pipe", "r"), // stdin
+       1 => array("file", $output_file, "w"), // stdout
+       2 => array("pipe", "w"), // stderr
+    );
+    $process = proc_open($cmd, $descriptorspec, $pipes);
+    
+    if (is_resource($process)) {
+      // Start
+      fclose($pipes[0]);
+      // Read stderr
+      $out = stream_get_contents($pipes[2]);
+      fclose($pipes[2]);
+      // Close process
+      $return = proc_close($process);
+    }
+    
+    if ($return != 0)
     {
-      throw new sfException('Fatal Error : JS skeleton cannot be found');
+      $this->logBlock($out, 'ERROR');
+      throw new sfException('Command failed (returned ' . $return . ')');
     }
     
-    $js = $this->getFilesystem()->sh($exec);
-    
-    $this->getFilesystem()->copy($js_skel, $output_file, array('override' => true));
-    $this->getFilesystem()->replaceTokens($output_file, '%', '%', array('JS' => $js));
+    $this->logBlock($out, 'INFO');
+    $this->log('Written "'.$output_file.'"');
   }
   
 }

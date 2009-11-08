@@ -1,0 +1,6 @@
+TODO
+
+Notes :
+
+ * Example using calcdeps :
+   ./symfony closure:calc-deps -i goog-test -o compiled --output=goog-test-full-and-compiled
