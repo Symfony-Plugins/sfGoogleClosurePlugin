@@ -7,7 +7,7 @@ function use_javascript_closure()
 {
   use_helper('Asset');
   
-  $base_path = sfConfig::get('app_googleClosure_base_path');
+  $base_path = sfConfig::get('app_googleClosure_base-path');
   $base_path = rtrim($base_path, '/');
   
   use_javascript($base_path . '/goog/base.js');
